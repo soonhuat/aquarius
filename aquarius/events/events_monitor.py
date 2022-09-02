@@ -181,6 +181,8 @@ class EventsMonitor(BlockProcessingClass):
             "EVENT_METADATA_UPDATED": MetadataUpdatedProcessor,
             "EVENT_METADATA_STATE": MetadataStateProcessor,
         }
+        if to_block > from_block + 5:
+            to_block = from_block + 5
         for event_name in event_processors:
             self.handle_regular_event_processor(
                 event_name,
