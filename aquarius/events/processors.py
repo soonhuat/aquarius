@@ -195,7 +195,7 @@ class MetadataCreatedProcessor(EventProcessor):
             _record["purgatory"]["state"] = False
         
         ## fancy penny mapper
-        if type(_record["metadata"]["additionalInformation"]["eula"]) is not dict:
+        if "eula" in _record["metadata"]["additionalInformation"] and type(_record["metadata"]["additionalInformation"]["eula"]) is not dict:
             _record["metadata"]["additionalInformation"]["eula"] = []
 
         return _record
