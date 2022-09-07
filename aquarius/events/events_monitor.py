@@ -153,7 +153,7 @@ class EventsMonitor(BlockProcessingClass):
         for end_block_chunk in range(
             from_block, current_block, self.blockchain_chunk_size
         ):
-            self.process_block_range(start_block_chunk, end_block_chunk)
+            self.process_block_range(start_block_chunk + 1, end_block_chunk)
             start_block_chunk = end_block_chunk
 
         # Process last few blocks because range(start, end) doesn't include end
