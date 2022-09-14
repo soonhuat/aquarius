@@ -8,6 +8,7 @@ import logging
 import os
 from abc import ABC
 from datetime import datetime
+from aquarius.app.util import set_default_additional_information_value
 
 from jsonsempai import magic  # noqa: F401
 
@@ -197,12 +198,8 @@ class MetadataCreatedProcessor(EventProcessor):
         logger.info(
             f"DDO to before save from processors : record={_record}"
         )
-        eulaType = type(_record["metadata"]["additionalInformation"]["eula"])
-        logger.info(
-            f"DDO to before save eula type ={eulaType}"
-        )
-        if "eula" in _record["metadata"]["additionalInformation"] and eulaType is not dict and eulaType is not list:
-            _record["metadata"]["additionalInformation"]["eula"] = []
+        set_default_additional_information_value(_record, "metadata", "eula")
+        set_default_additional_information_value(_record, "services", "links")
         logger.info(
             f"DDO to save from processors : record={_record}"
         )
@@ -320,6 +317,10 @@ class MetadataUpdatedProcessor(EventProcessor):
             _record["purgatory"]["state"] = True
         else:
             _record["purgatory"]["state"] = old_purgatory.get("state", False)
+
+        ## fancy penny mapper
+        set_default_additional_information_value(_record, "metadata", "eula")
+        set_default_additional_information_value(_record, "services", "links")
 
         return _record
 
