@@ -126,3 +126,10 @@ def get_allowed_publishers():
         )
 
     return set(sanitize_addresses(allowed_publishers))
+
+
+def set_default_additional_information_value(record, object, key):
+    field = record["metadata"]["additionalInformation"][key] if object == "metadata" else record["services"][0]["additionalInformation"][key]
+    fieldType = type(field)
+    if key in field and fieldType is not dict and fieldType is not list:
+        field = []
