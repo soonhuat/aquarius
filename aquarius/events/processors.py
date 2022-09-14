@@ -194,8 +194,18 @@ class MetadataCreatedProcessor(EventProcessor):
             _record["purgatory"]["state"] = False
         
         ## fancy penny mapper
-        if "eula" in _record["metadata"]["additionalInformation"] and type(_record["metadata"]["additionalInformation"]["eula"]) is not dict:
+        logger.info(
+            f"DDO to before save from processors : record={_record}"
+        )
+        eulaType = type(_record["metadata"]["additionalInformation"]["eula"])
+        logger.info(
+            f"DDO to before save eula type ={eulaType}"
+        )
+        if "eula" in _record["metadata"]["additionalInformation"] and eulaType is not dict and eulaType is not list:
             _record["metadata"]["additionalInformation"]["eula"] = []
+        logger.info(
+            f"DDO to save from processors : record={_record}"
+        )
 
         return _record
 
