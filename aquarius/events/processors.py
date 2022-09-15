@@ -385,7 +385,7 @@ class MetadataUpdatedProcessor(EventProcessor):
         if _record:
             try:
                 self._es_instance.update(json.dumps(_record), did)
-                updated = _record["updated"]
+                updated = _record["updated"] if "updated" in _record else _record["event"]["datetime"]
                 logger.info(f"updated DDO did={did}, updated: {updated}")
                 return True
             except (KeyError, Exception) as err:
