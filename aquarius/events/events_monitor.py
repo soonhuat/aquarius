@@ -4,6 +4,7 @@
 #
 import json
 import logging
+import math
 import os
 import time
 from threading import Thread
@@ -12,7 +13,7 @@ import elasticsearch
 from jsonsempai import magic  # noqa: F401
 
 from aquarius.app.es_instance import ElasticsearchInstance
-from aquarius.app.util import get_bool_env_value, get_allowed_publishers
+from aquarius.app.util import get_bool_env_value, get_allowed_publishers, reset_monitor_sleep_time
 from aquarius.block_utils import BlockProcessingClass
 from aquarius.events.constants import EventTypes
 from aquarius.events.processors import (
@@ -128,7 +129,13 @@ class EventsMonitor(BlockProcessingClass):
         try:
             self.process_current_blocks()
         except (KeyError, Exception) as e:
-            logger.error(f"Error processing event: {str(e)}.")
+            errorPostfixMsg = ""
+            if str(e).index("10000") != -1:
+                self.error_end_block_number = self.end_block_number
+                self.current_block_current_size = math.ceil(self.current_block_current_size / 20)
+                errorPostfixMsg = f" Block chunk size will reduce to {self.current_block_current_size}"
+                self._monitor_sleep_time = 1
+            logger.error(f"Error processing event: {str(e)}.{errorPostfixMsg}")
 
         if self.purgatory:
             try:
@@ -148,11 +155,18 @@ class EventsMonitor(BlockProcessingClass):
             return
 
         from_block = last_block
+        if self.error_end_block_number and self.error_end_block_number < from_block:
+            self.error_end_block_number = None
+            self.current_block_current_size = self.blockchain_chunk_size
+            reset_monitor_sleep_time(self)
+        elif self.current_block_current_size is None:
+            self.current_block_current_size = self.blockchain_chunk_size
 
         start_block_chunk = from_block
         for end_block_chunk in range(
-            from_block, current_block, self.blockchain_chunk_size
+            from_block, current_block, self.current_block_current_size
         ):
+            self.end_block_number = end_block_chunk
             self.process_block_range(start_block_chunk + 1, end_block_chunk)
             start_block_chunk = end_block_chunk
 
