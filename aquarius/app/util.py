@@ -133,3 +133,14 @@ def set_default_additional_information_value(record, object, key):
     fieldType = type(field)
     if key in field and fieldType is not dict and fieldType is not list:
         field = []
+        
+def reset_monitor_sleep_time(self):
+    default_sleep_time = 1
+    try:
+        self._monitor_sleep_time = int(
+            os.getenv("OCN_EVENTS_MONITOR_QUITE_TIME", default_sleep_time)
+        )
+    except ValueError:
+        self._monitor_sleep_time = default_sleep_time
+
+    self._monitor_sleep_time = max(self._monitor_sleep_time, default_sleep_time)
