@@ -137,8 +137,8 @@ class EventsMonitor(BlockProcessingClass):
         try:
             self.process_current_blocks()
         except (KeyError, Exception) as e:
-            errorPostfixMsg = ""
-            if str(e).index("10000") != -1:
+            errorPostfixMsg = ""            
+            if str(e).find("10000") != -1:
                 self.error_end_block_number = self.end_block_number
                 self.current_block_current_size = math.ceil(self.current_block_current_size / 20)
                 errorPostfixMsg = f" Block chunk size will reduce to {self.current_block_current_size}"
@@ -165,12 +165,12 @@ class EventsMonitor(BlockProcessingClass):
             return
 
         from_block = last_block
-        if self.error_end_block_number and self.error_end_block_number < from_block:
+        if self.current_block_current_size is None:
+            self.current_block_current_size = self.blockchain_chunk_size
+        elif self.error_end_block_number and self.error_end_block_number < from_block:
             self.error_end_block_number = None
             self.current_block_current_size = self.blockchain_chunk_size
             reset_monitor_sleep_time(self)
-        elif self.current_block_current_size is None:
-            self.current_block_current_size = self.blockchain_chunk_size
 
         start_block_chunk = from_block
         for end_block_chunk in range(
