@@ -129,7 +129,15 @@ def get_allowed_publishers():
 
 
 def set_default_additional_information_value(record, object, key):
-    field = record["metadata"]["additionalInformation"][key] if object == "metadata" else record["services"][0]["additionalInformation"][key]
+    field = None
+    if object == "metadata" and key in record["metadata"]["additionalInformation"]:
+        field = record["metadata"]["additionalInformation"][key]
+    elif object == "services" and key in record["services"][0]["additionalInformation"]:
+        field = record["services"][0]["additionalInformation"][key]
+    
+    if field is None:
+        return
+    
     fieldType = type(field)
     if key in field and fieldType is not dict and fieldType is not list:
         field = []
