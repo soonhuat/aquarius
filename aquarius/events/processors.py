@@ -8,6 +8,7 @@ import logging
 import os
 from abc import ABC
 from datetime import datetime
+from aquarius.app.util import set_default_additional_information_value
 
 from jsonsempai import magic  # noqa: F401
 
@@ -194,8 +195,8 @@ class MetadataCreatedProcessor(EventProcessor):
             _record["purgatory"]["state"] = False
         
         ## fancy penny mapper
-        if "eula" in _record["metadata"]["additionalInformation"] and type(_record["metadata"]["additionalInformation"]["eula"]) is not dict:
-            _record["metadata"]["additionalInformation"]["eula"] = []
+        set_default_additional_information_value(_record, "metadata", "eula")
+        set_default_additional_information_value(_record, "services", "links")
 
         return _record
 
@@ -311,6 +312,10 @@ class MetadataUpdatedProcessor(EventProcessor):
         else:
             _record["purgatory"]["state"] = old_purgatory.get("state", False)
 
+        ## fancy penny mapper
+        set_default_additional_information_value(_record, "metadata", "eula")
+        set_default_additional_information_value(_record, "services", "links")
+
         return _record
 
     def process(self):
@@ -380,7 +385,7 @@ class MetadataUpdatedProcessor(EventProcessor):
         if _record:
             try:
                 self._es_instance.update(json.dumps(_record), did)
-                updated = _record["updated"]
+                updated = _record["updated"] if "updated" in _record else _record["event"]["datetime"]
                 logger.info(f"updated DDO did={did}, updated: {updated}")
                 return True
             except (KeyError, Exception) as err:
