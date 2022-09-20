@@ -155,9 +155,15 @@ class EventsMonitor(BlockProcessingClass):
             return
 
         from_block = last_block
-        if self.current_block_current_size is None:
+        if not hasattr(self, "current_block_current_size"):
             self.current_block_current_size = self.blockchain_chunk_size
-        elif self.error_end_block_number and self.error_end_block_number < from_block:
+            logger.info(
+                f"process_current_blocks self.current_block_current_size is None so will set to {self.current_block_current_size}"
+            )
+        elif hasattr(self, "error_end_block_number") and isinstance(self.error_end_block_number, int) and self.error_end_block_number < from_block:
+            logger.info(
+                f"process_current_blocks now at {from_block} passed {self.error_end_block_number}, will reset block chunk to {self.current_block_current_size}"
+            )
             self.error_end_block_number = None
             self.current_block_current_size = self.blockchain_chunk_size
             reset_monitor_sleep_time(self)
