@@ -133,7 +133,7 @@ class EventsMonitor(BlockProcessingClass):
             if str(e).find("10000") != -1:
                 self.error_end_block_number = self.end_block_number
                 self.current_block_current_size = math.ceil(self.current_block_current_size / 20)
-                errorPostfixMsg = f" Block chunk size will reduce to {self.current_block_current_size}"
+                errorPostfixMsg = f" , Error found with error_end_block_number: {self.error_end_block_number}, Block chunk size will reduce to {self.current_block_current_size}"
                 self._monitor_sleep_time = 1
             logger.error(f"Error processing event: {str(e)}.{errorPostfixMsg}")
 
@@ -167,6 +167,16 @@ class EventsMonitor(BlockProcessingClass):
             self.error_end_block_number = None
             self.current_block_current_size = self.blockchain_chunk_size
             reset_monitor_sleep_time(self)
+
+        if hasattr(self, "error_end_block_number"):
+            logger.info(
+                f"process_current_blocks just now has error_end_block_number: {self.error_end_block_number}\n"
+            )
+            if isinstance(self.error_end_block_number, int):
+                logger.info(
+                    f"process_current_blocks just now has error_end_block_number: {self.error_end_block_number} and from_block: {from_block}, is less than from block {self.error_end_block_number < from_block}"
+                )
+        
 
         start_block_chunk = from_block
         for end_block_chunk in range(
