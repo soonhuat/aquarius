@@ -146,6 +146,9 @@ class RetryMechanism:
             self._purgatory,
             chain_id,
         ]
+        logger.info(
+            f"retry mechanism self._es_instance just start retry for tx: {tx_id}"
+        )
 
         processor = (
             MetadataCreatedProcessor if created_event else MetadataUpdatedProcessor
@@ -154,7 +157,17 @@ class RetryMechanism:
         event_processor = processor(
             *([event_to_process, dt_contract, tx_receipt["from"]] + processor_args)
         )
-        event_processor.process()
+        *res, = event_processor.process()
         did = make_did(dt_address, chain_id)
+
+        if len(res) > 1 and res[0] == False and res[1] == "skip":
+            logger.info(
+                f"retry mechanism self._es_instance process success: {res[0]}, with condition: {res[1]}"
+            )
+            return True, f"skipped retry for record: {did}"
+            
+        logger.info(
+            f"retry mechanism self._es_instance get: {did}"
+        )
 
         return True, sanitize_record(self._es_instance.get(did))
