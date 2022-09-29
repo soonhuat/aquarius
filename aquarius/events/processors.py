@@ -56,10 +56,6 @@ class EventProcessor(ABC):
         self.metadata_proofs = None
 
     def check_permission(self, publisher_address):
-        rbac_url = os.getenv("RBAC_SERVER_URL")
-        logger.debug(
-            f"Process new DDO, check_permission publisher_address:{publisher_address}, RBAC: {rbac_url}"
-        )
         if not os.getenv("RBAC_SERVER_URL") or not publisher_address:
             return True
 

@@ -132,8 +132,8 @@ class EventsMonitor(BlockProcessingClass):
             errorPostfixMsg = ""            
             if str(e).find("10000") != -1:
                 self.error_end_block_number = self.end_block_number
-                self.current_block_current_size = math.ceil(self.current_block_current_size / 20)
-                errorPostfixMsg = f" , Error found with error_end_block_number: {self.error_end_block_number}, Block chunk size will reduce to {self.current_block_current_size}"
+                self.sync_blockchain_chunk_size = math.ceil(self.sync_blockchain_chunk_size / 20)
+                errorPostfixMsg = f" , Error found with error_end_block_number: {self.error_end_block_number}, Block chunk size will reduce to {self.sync_blockchain_chunk_size}"
                 self._monitor_sleep_time = 1
             logger.error(f"Error processing event: {str(e)}.{errorPostfixMsg}")
 
@@ -143,46 +143,31 @@ class EventsMonitor(BlockProcessingClass):
             except (KeyError, Exception) as e:
                 logger.error(f"Error updating purgatory list: {str(e)}.")
 
-    def dynamic_block_hanlder(self, from_block):
-        if not hasattr(self, "current_block_current_size"):
-            self.current_block_current_size = self.blockchain_chunk_size
+    def dynamic_block_setup(self, from_block):
+        if not hasattr(self, "sync_blockchain_chunk_size"):
+            self.sync_blockchain_chunk_size = self.blockchain_chunk_size
             logger.info(
-                f"process_current_blocks self.current_block_current_size is None so will set to {self.current_block_current_size}"
+                f"process_current_blocks self.sync_blockchain_chunk_size is None so will set to {self.sync_blockchain_chunk_size}"
             )
         elif hasattr(self, "error_end_block_number") and isinstance(self.error_end_block_number, int) and self.error_end_block_number < from_block:
-            self.current_block_current_size = self.blockchain_chunk_size
+            self.sync_blockchain_chunk_size = self.blockchain_chunk_size
             logger.info(
-                f"process_current_blocks now at {from_block} passed {self.error_end_block_number}, will reset block chunk to {self.current_block_current_size}"
+                f"process_current_blocks now at {from_block} passed error block {self.error_end_block_number}, will reset block chunk to {self.sync_blockchain_chunk_size}"
             )
             self.error_end_block_number = None
-            reset_monitor_sleep_time(self)
         else:
-            logger.info(
-                f"process_current_blocks has current_block_current_size: {self.current_block_current_size}, currently from {from_block}, "
-                f"default block chunk size: {self.blockchain_chunk_size}"
-            )
             if hasattr(self, "error_end_block_number"):
                 logger.info(
                     f"process_current_blocks strangely has error_end_block_number: {self.error_end_block_number}, "
                     f"and is int: {isinstance(self.error_end_block_number, int)}"
                 )
-            if not hasattr(self, "error_end_block_number") and self.current_block_current_size < self.blockchain_chunk_size:
+            if not hasattr(self, "error_end_block_number") and self.sync_blockchain_chunk_size < self.blockchain_chunk_size:
                 logger.info(
-                    f"process_current_blocks now at {from_block} doesn't have error_end_block_number, "
-                    f"with current size {self.current_block_current_size} less than {self.blockchain_chunk_size}, "
+                    f"process_current_blocks strangely now at {from_block} doesn't have error_end_block_number, "
+                    f"with sync blockchain chunk size {self.sync_blockchain_chunk_size} less than default {self.blockchain_chunk_size}, "
                     f"will reset timer and block chunk size"
                 )
-                self.current_block_current_size = self.blockchain_chunk_size
-                reset_monitor_sleep_time(self)
-
-        if hasattr(self, "error_end_block_number"):
-            logger.info(
-                f"process_current_blocks just now has error_end_block_number: {self.error_end_block_number}\n"
-            )
-            if isinstance(self.error_end_block_number, int):
-                logger.info(
-                    f"process_current_blocks just now has error_end_block_number: {self.error_end_block_number} and from_block: {from_block}, is less than from block {self.error_end_block_number < from_block}"
-                )
+                self.sync_blockchain_chunk_size = self.blockchain_chunk_size
 
     def process_current_blocks(self):
         """Process all blocks from the last processed block to the current block."""
@@ -196,28 +181,21 @@ class EventsMonitor(BlockProcessingClass):
             return
 
         from_block = last_block
-        self.dynamic_block_hanlder(from_block)
-        
-        logger.info(
-            f"process_current_blocks_wyw right now processing from: {from_block} to: {last_block} for self.current_block_current_size: {self.current_block_current_size}\n"
-        )
+        self.dynamic_block_setup(from_block)
 
         start_block_chunk = from_block
         # for end_block_chunk in range(
-        #     from_block, current_block, self.current_block_current_size
+        #     from_block, current_block, self.sync_blockchain_chunk_size
         # ):
         end_block_chunk = start_block_chunk + 1
-        while start_block_chunk + self.current_block_current_size < current_block:
-            end_block_chunk = start_block_chunk + self.current_block_current_size
+        while start_block_chunk + self.sync_blockchain_chunk_size < current_block:
+            end_block_chunk = start_block_chunk + self.sync_blockchain_chunk_size
             self.end_block_number = end_block_chunk
             self.process_block_range(start_block_chunk + 1, end_block_chunk)
             start_block_chunk = end_block_chunk
 
         # Process last few blocks because range(start, end) doesn't include end
         self.process_block_range(end_block_chunk, current_block)
-        logger.info(
-            f"process_current_blocks done processing current block up to {end_block_chunk}"
-        )
 
     def process_block_range(self, from_block, to_block):
         """Process a range of blocks."""
@@ -228,7 +206,7 @@ class EventsMonitor(BlockProcessingClass):
         if from_block > to_block:
             return
 
-        self.dynamic_block_hanlder(from_block)
+        self.dynamic_block_setup(from_block)
         
         processor_args = [
             self._es_instance,
@@ -251,9 +229,6 @@ class EventsMonitor(BlockProcessingClass):
                 from_block,
                 to_block,
             )
-        logger.info(
-            f"Metadata monitor done event_processors {event_processors}"
-        )
 
         self.handle_price_change(from_block, to_block)
         self.handle_token_uri_update(from_block, to_block)
