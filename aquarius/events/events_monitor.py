@@ -137,13 +137,31 @@ class EventsMonitor(BlockProcessingClass):
         try:
             self.process_current_blocks()
         except (KeyError, Exception) as e:
-            logger.error(f"Error processing event: {str(e)}.")
+            errorPostfixMsg = ""            
+            if str(e).find("10000") != -1:
+                self.error_end_block_number = self.end_block_number
+                self.sync_blockchain_chunk_size = math.ceil(self.sync_blockchain_chunk_size / 20)
+                errorPostfixMsg = f" Error found with end block number: {self.error_end_block_number}, sync blockchain chunk size will reduce to {self.sync_blockchain_chunk_size}"
+            logger.error(f"Error processing event: {str(e)}.{errorPostfixMsg}")
 
         if self.purgatory:
             try:
                 self.purgatory.update_lists()
             except (KeyError, Exception) as e:
                 logger.error(f"Error updating purgatory list: {str(e)}.")
+
+    def dynamic_block_setup(self, from_block):
+        if not hasattr(self, "sync_blockchain_chunk_size"):
+            self.sync_blockchain_chunk_size = self.blockchain_chunk_size
+            logger.info(
+                f"dynamic_block_setup sync blockchain chunk size is None, setting to {self.sync_blockchain_chunk_size}"
+            )
+        elif hasattr(self, "error_end_block_number") and isinstance(self.error_end_block_number, int) and self.error_end_block_number < from_block:
+            self.sync_blockchain_chunk_size = self.blockchain_chunk_size
+            logger.info(
+                f"dynamic_block_setup now at block: {from_block} passed error block: {self.error_end_block_number}, will reset sync blockchain chunk size to {self.sync_blockchain_chunk_size}"
+            )
+            self.error_end_block_number = None
 
     def process_current_blocks(self):
         """Process all blocks from the last processed block to the current block."""
@@ -160,12 +178,14 @@ class EventsMonitor(BlockProcessingClass):
             return
 
         from_block = last_block
+        self.dynamic_block_setup(from_block)
 
         start_block_chunk = from_block
-        for end_block_chunk in range(
-            from_block, current_block, self.blockchain_chunk_size
-        ):
-            self.process_block_range(start_block_chunk, end_block_chunk)
+        end_block_chunk = start_block_chunk + 1
+        while start_block_chunk + self.sync_blockchain_chunk_size < current_block:
+            end_block_chunk = start_block_chunk + self.sync_blockchain_chunk_size
+            self.end_block_number = end_block_chunk
+            self.process_block_range(start_block_chunk + 1, end_block_chunk)
             start_block_chunk = end_block_chunk
 
         # Process last few blocks because range(start, end) doesn't include end
@@ -180,6 +200,8 @@ class EventsMonitor(BlockProcessingClass):
         if from_block > to_block:
             return
 
+        self.dynamic_block_setup(from_block)
+        
         processor_args = [
             self._es_instance,
             self._web3,
