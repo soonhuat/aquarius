@@ -141,8 +141,7 @@ class EventsMonitor(BlockProcessingClass):
             if str(e).find("10000") != -1:
                 self.error_end_block_number = self.end_block_number
                 self.sync_blockchain_chunk_size = math.ceil(self.sync_blockchain_chunk_size / 20)
-                errorPostfixMsg = f" , Error found with error_end_block_number: {self.error_end_block_number}, Block chunk size will reduce to {self.sync_blockchain_chunk_size}"
-                self._monitor_sleep_time = 1
+                errorPostfixMsg = f" Error found with end block number: {self.error_end_block_number}, sync blockchain chunk size will reduce to {self.sync_blockchain_chunk_size}"
             logger.error(f"Error processing event: {str(e)}.{errorPostfixMsg}")
 
         if self.purgatory:
