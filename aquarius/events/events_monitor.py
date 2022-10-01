@@ -13,7 +13,7 @@ import elasticsearch
 from jsonsempai import magic  # noqa: F401
 
 from aquarius.app.es_instance import ElasticsearchInstance
-from aquarius.app.util import get_bool_env_value, get_allowed_publishers, reset_monitor_sleep_time
+from aquarius.app.util import get_bool_env_value, get_allowed_publishers
 from aquarius.block_utils import BlockProcessingClass
 from aquarius.retry_mechanism import RetryMechanism
 from aquarius.events.constants import EventTypes
