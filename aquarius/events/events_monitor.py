@@ -155,27 +155,14 @@ class EventsMonitor(BlockProcessingClass):
         if not hasattr(self, "sync_blockchain_chunk_size"):
             self.sync_blockchain_chunk_size = self.blockchain_chunk_size
             logger.info(
-                f"process_current_blocks self.sync_blockchain_chunk_size is None so will set to {self.sync_blockchain_chunk_size}"
+                f"dynamic_block_setup sync blockchain chunk size is None, setting to {self.sync_blockchain_chunk_size}"
             )
         elif hasattr(self, "error_end_block_number") and isinstance(self.error_end_block_number, int) and self.error_end_block_number < from_block:
             self.sync_blockchain_chunk_size = self.blockchain_chunk_size
             logger.info(
-                f"process_current_blocks now at {from_block} passed error block {self.error_end_block_number}, will reset block chunk to {self.sync_blockchain_chunk_size}"
+                f"dynamic_block_setup now at block: {from_block} passed error block: {self.error_end_block_number}, will reset sync blockchain chunk size to {self.sync_blockchain_chunk_size}"
             )
             self.error_end_block_number = None
-        else:
-            if hasattr(self, "error_end_block_number"):
-                logger.info(
-                    f"process_current_blocks strangely has error_end_block_number: {self.error_end_block_number}, "
-                    f"and is int: {isinstance(self.error_end_block_number, int)}"
-                )
-            if not hasattr(self, "error_end_block_number") and self.sync_blockchain_chunk_size < self.blockchain_chunk_size:
-                logger.info(
-                    f"process_current_blocks strangely now at {from_block} doesn't have error_end_block_number, "
-                    f"with sync blockchain chunk size {self.sync_blockchain_chunk_size} less than default {self.blockchain_chunk_size}, "
-                    f"will reset timer and block chunk size"
-                )
-                self.sync_blockchain_chunk_size = self.blockchain_chunk_size
 
     def process_current_blocks(self):
         """Process all blocks from the last processed block to the current block."""
