@@ -261,7 +261,7 @@ class MetadataCreatedProcessor(EventProcessor):
                     logger.warning(f"{did} is already registered on this chainId")
                     return
                 self.restore_nft_state(ddo, asset["nft"]["state"])
-                return True, ""
+                return True
         except Exception:
             pass
 
@@ -270,7 +270,7 @@ class MetadataCreatedProcessor(EventProcessor):
             logger.error(
                 f"[ACENTRIK_REVISIT] RBAC permission denied while processing new DDO no permission, sender_address:{sender_address}, txid: {self.txid}, block {self.block}, permission: {permission}, assset: {asset}"
             )
-            return False, "skip"
+            return False
 
         _record = self.make_record(asset)
 
@@ -289,7 +289,7 @@ class MetadataCreatedProcessor(EventProcessor):
                 raise Exception(
                     f"encountered an error while saving the asset data to ES: {str(err)}"
                 )
-        return False, ""
+        return False
 
 
 class MetadataUpdatedProcessor(EventProcessor):
@@ -370,7 +370,7 @@ class MetadataUpdatedProcessor(EventProcessor):
             logger.error(
                 f"[ACENTRIK_REVISIT] RBAC permission denied while processing new DDO no permission, sender_address:{sender_address}, txid: {self.txid}, block {self.block}, permission: {permission}, assset: {asset}"
             )
-            return False, "skip"
+            return False
 
         try:
             old_asset = self._es_instance.read(did)
@@ -393,7 +393,7 @@ class MetadataUpdatedProcessor(EventProcessor):
 
         is_updateable = self.check_update(asset, old_asset, sender_address)
         if not is_updateable:
-            return False, ""
+            return False
 
         _record = self.make_record(asset, old_asset)
         if _record:
@@ -407,7 +407,7 @@ class MetadataUpdatedProcessor(EventProcessor):
                     f"encountered an error while updating the asset data to ES: {str(err)}"
                 )
 
-        return False, ""
+        return False
 
     def check_update(self, new_asset, old_asset, sender_address):
         # do not update if we have the same txid
