@@ -42,10 +42,10 @@ class RetryMechanism:
         params = {"tx_id": tx_id, "log_index": log_index, "chain_id": chain_id}
 
         rm_id = sha256(json.dumps(params).encode("utf-8")).hexdigest()
+
         try:
             result = self.get_by_id(rm_id)
             params["number_retries"] = result["number_retries"] + 1
-
         except Exception:
             params["number_retries"] = 0
             pass
@@ -150,24 +150,17 @@ class RetryMechanism:
             f"retry mechanism self._es_instance just start retry for tx: {tx_id}"
         )
 
-        processor = (
-            MetadataCreatedProcessor if created_event else MetadataUpdatedProcessor
-        )
-        event_to_process = created_event[0] if created_event else updated_event[0]
-        event_processor = processor(
-            *([event_to_process, dt_contract, tx_receipt["from"]] + processor_args)
-        )
-        *res, = event_processor.process()
-        did = make_did(dt_address, chain_id)
-
-        if len(res) > 1 and res[0] == False and res[1] == "skip":
-            logger.info(
-                f"retry mechanism self._es_instance process success: {res[0]}, with condition: {res[1]}"
+        try:
+            processor = (
+                MetadataCreatedProcessor if created_event else MetadataUpdatedProcessor
             )
-            return True, f"skipped retry for record: {did}"
-            
-        logger.info(
-            f"retry mechanism self._es_instance get: {did}"
-        )
+            event_to_process = created_event[0] if created_event else updated_event[0]
+            event_processor = processor(
+                *([event_to_process, dt_contract, tx_receipt["from"]] + processor_args)
+            )
+            event_processor.process()
+            did = make_did(dt_address, chain_id)
 
-        return True, sanitize_record(self._es_instance.get(did))
+            return True, sanitize_record(self._es_instance.get(did))
+        except Exception:
+            return False, "new exception in processor, retry again"
