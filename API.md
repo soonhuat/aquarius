@@ -17,7 +17,7 @@
 - Example
 
     ```bash
-    curl --location --request GET 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/query/api/v1/aquarius/assets/ddo/did:op:CbD7aeecB5DFbABaB9126B5Cf1262dCFBA178479'
+    curl --location --request GET 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/ddo/did:op:CbD7aeecB5DFbABaB9126B5Cf1262dCFBA178479'
     ```
 
 - Responses
@@ -50,7 +50,7 @@
 - Example
 
     ```bash
-    curl --location --request GET 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/query/api/v1/aquarius/assets/metadata/did:op:CbD7aeecB5DFbABaB9126B5Cf1262dCFBA178479'
+    curl --location --request GET 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/metadata/did:op:CbD7aeecB5DFbABaB9126B5Cf1262dCFBA178479'
     ```
 - Responses
     - 200
@@ -82,7 +82,7 @@
 - Example
 
     ```bash
-    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/query/api/v1/aquarius/assets/names' \
+    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/names' \
     --header 'Content-Type: application/json' \
     --data-raw '{
         "didList" : ["did:op:CbD7aeecB5DFbABaB9126B5Cf1262dCFBA178479"]
@@ -115,7 +115,7 @@
 - Example
 
     ```bash
-    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/query/api/v1/aquarius/assets/query' \
+    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/query' \
     --header 'Content-Type: application/json' \
     --data-raw '{
         "query": {
@@ -139,7 +139,7 @@
 - Example
 
     ```bash
-    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/query/api/v1/aquarius/assets/ddo/validate' \
+    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/ddo/validate' \
     --header 'Content-Type: application/json' \
     --data-raw '<json_body>'
     ```
@@ -149,7 +149,7 @@
         {
             "@context": ["https://w3id.org/did/v1"],
             "id": "did:op:56c3d0ac76c02cc5cec98993be2b23c8a681800c08f2ff77d40c895907517280",
-            "version": "4.1.0",
+            "version": "4.3.0",
             "chainId": 1337,
             "nftAddress": "0xabc",
             "metadata": {
@@ -214,7 +214,7 @@
 - Example
 
     ```bash
-    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/query/api/v1/aquarius/assets/triggerCaching' \
+    curl --location --request POST 'https://v4.aquarius.oceanprotocol.com/api/aquarius/assets/triggerCaching' \
     --header 'Content-Type: application/json' \
     --data-raw '<json_body>'
     ```
@@ -282,7 +282,8 @@
         - Description: Successful request
         - Body
             ```JSON
-            {"last_block": 25198729}
+            {"last_block": 25198729,
+            "version": "4.4.1"}
             ```
 
 ## Others

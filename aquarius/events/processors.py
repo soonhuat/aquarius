@@ -21,7 +21,7 @@ from aquarius.events.constants import (
 from aquarius.events.decryptor import decrypt_ddo
 from aquarius.events.proof_checker import check_metadata_proofs
 from aquarius.events.util import make_did, get_dt_factory
-from aquarius.graphql import get_number_orders
+from aquarius.graphql import get_number_orders_price
 from aquarius.rbac import RBAC
 from artifacts import ERC20Template, ERC721Template
 from web3.logs import DISCARD
@@ -92,10 +92,13 @@ class EventProcessor(ABC):
 
         record[AquariusCustomDDOFields.DATATOKENS] = self.get_tokens_info(record)
 
+        order_count, price = get_number_orders_price(
+            self.dt_contract.address, self.block, self._chain_id
+        )
         record[AquariusCustomDDOFields.STATS] = {
-            "orders": get_number_orders(
-                self.dt_contract.address, self.block, self._chain_id
-            )
+            "allocated": 0,
+            "orders": order_count,
+            "price": price,
         }
 
         return record, block_time
@@ -226,6 +229,8 @@ class MetadataCreatedProcessor(EventProcessor):
         if not check_metadata_proofs(self._web3, self.metadata_proofs):
             return
 
+        # if not authorized, will return False, which is a graceful failure
+        # otherwise it will raise an exception
         asset = decrypt_ddo(
             self._web3,
             self.event.args.decryptorUrl,
@@ -235,8 +240,8 @@ class MetadataCreatedProcessor(EventProcessor):
             self.event.args.metaDataHash,
         )
         if not asset:
-            logger.error("Decrypt ddo failed")
-            raise Exception("Decrypt ddo failed")
+            logger.info("Decrypter is not authorized. Failing gracefully.")
+            return
 
         self.did = asset["id"]
         did, sender_address = self.did, self.sender_address
@@ -336,6 +341,8 @@ class MetadataUpdatedProcessor(EventProcessor):
 
             return
 
+        # if not authorized, will return False, which is a graceful failure
+        # otherwise it will raise an exception
         asset = decrypt_ddo(
             self._web3,
             self.event.args.decryptorUrl,
@@ -345,8 +352,8 @@ class MetadataUpdatedProcessor(EventProcessor):
             self.event.args.metaDataHash,
         )
         if not asset:
-            logger.error("Decrypt ddo failed")
-            raise Exception("Decrypt ddo failed")
+            logger.info("Decrypter is not authorized. Failing gracefully.")
+            return
 
         self.did = asset["id"]
         did, sender_address = self.did, self.sender_address
@@ -436,10 +443,11 @@ class OrderStartedProcessor:
             return
 
         logger.debug(f"Retrieving number of orders for {self.token_address}.")
-        number_orders = get_number_orders(
+        number_orders, price = get_number_orders_price(
             self.token_address, self.last_sync_block, self.chain_id
         )
         self.asset["stats"]["orders"] = number_orders
+        self.asset["stats"]["price"] = price
 
         logger.debug(f"Updating number of orders to {number_orders} for {self.did}.")
         self.es_instance.update(self.asset, self.did)
@@ -542,3 +550,33 @@ class MetadataStateProcessor(EventProcessor):
                 return
 
         self.update_aqua_nft_state_data(self.event.args.state, self.did)
+
+
+class TransferProcessor:
+    def __init__(self, event, web3, es_instance, chain_id):
+        self.did = make_did(event.address, chain_id)
+        self.es_instance = es_instance
+        self.event = event
+        self.web3 = web3
+
+        try:
+            self.asset = self.es_instance.read(self.did)
+        except Exception:
+            self.asset = None
+
+    def process(self):
+        if not self.asset:
+            return
+
+        erc721_contract = self.web3.eth.contract(
+            abi=ERC721Template.abi,
+            address=self.web3.toChecksumAddress(self.event.address),
+        )
+        receipt = self.web3.eth.getTransactionReceipt(self.event.transactionHash)
+        event_decoded = erc721_contract.events.Transfer().processReceipt(
+            receipt, errors=DISCARD
+        )[0]
+        self.asset["nft"]["owner"] = event_decoded.args.to
+        logger.debug(f"Update owner for {self.did} to {event_decoded.args.to}")
+        self.es_instance.update(self.asset, self.did)
+        return self.asset

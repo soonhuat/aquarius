@@ -180,10 +180,10 @@ def test_missing_attributes():
     processor.event.address = "0x0000000000000000000000000000000000000000"
 
     with patch("aquarius.events.processors.decrypt_ddo") as mock:
-        mock.return_value = None
+        mock.side_effect = Exception("in decrypt_ddo: some message")
         with patch("aquarius.events.processors.get_dt_factory") as mock2:
             mock2.return_value = dt_factory
-            with pytest.raises(Exception, match="Decrypt ddo failed"):
+            with pytest.raises(Exception, match="in decrypt_ddo: some message"):
                 processor.process()
 
     processor = MetadataUpdatedProcessor(
@@ -204,10 +204,10 @@ def test_missing_attributes():
     processor.event.address = "0x0000000000000000000000000000000000000000"
 
     with patch("aquarius.events.processors.decrypt_ddo") as mock:
-        mock.return_value = None
+        mock.side_effect = Exception("in decrypt_ddo: some message")
         with patch("aquarius.events.processors.get_dt_factory") as mock2:
             mock2.return_value = dt_factory
-            with pytest.raises(Exception, match="Decrypt ddo failed"):
+            with pytest.raises(Exception, match="in decrypt_ddo: some message"):
                 processor.process()
 
 
@@ -239,13 +239,16 @@ def test_order_started_processor():
     es_instance.read.return_value = {"sample_asset": "mock", "stats": {"orders": 0}}
     es_instance.update.return_value = None
 
+    price_json = {"value": 12.4, "tokenAddress": "test", "tokenSymbol": "test2"}
+
     processor = OrderStartedProcessor(dt_address, es_instance, 0, 0)
-    with patch("aquarius.events.processors.get_number_orders") as no_mock:
-        no_mock.return_value = 3
+    with patch("aquarius.events.processors.get_number_orders_price") as no_mock:
+        no_mock.return_value = 3, price_json
         updated_asset = processor.process()
 
     assert es_instance.update.called_once()
     assert updated_asset["stats"]["orders"] == 3
+    assert updated_asset["stats"]["price"] == price_json
 
 
 def test_order_started_processor_no_asset():

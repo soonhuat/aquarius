@@ -24,6 +24,7 @@ SPDX-License-Identifier: Apache-2.0
 * [Using Aquarius](#using-aquarius)
    * [Quickstart](#quickstart)
    * [Learn about Aquarius API](#learn-about-aquarius-api)
+   * [Running Aquarius locally](#running-aquarius-locally)
    * [Development](#development)
 * [License](#license)
 
@@ -41,8 +42,8 @@ The metadata is published on-chain as such:
 * The metadata on-chain is not kept in storage, but rather is captured in an event log named `MetadataCreated`
 * Aquarius defers to the Provider for encryption and decryption. Aquarius and Provider support utf-8 encoded strings. You can look into the encrypt/decrypt flows if you want to learn more, but you will generally not need to go in-depth just to use Aquarius.
 
-For more details on working with OCEAN DIDs check out the [DID concept documentation](https://docs.oceanprotocol.com/concepts/did-ddo/).
-The [DDO Metadata documentation](https://docs.oceanprotocol.com/concepts/ddo-metadata/) goes into more depth regarding metadata structure.
+For more details on working with OCEAN DIDs check out the [DID concept documentation](https://docs.oceanprotocol.com/core-concepts/did-ddo/).
+The [DDO Metadata documentation](https://docs.oceanprotocol.com/core-concepts/did-ddo#metadata) goes into more depth regarding metadata structure.
 
 ## Components and architecture
 
@@ -50,7 +51,7 @@ Aquarius is a simple, lightweight scanner and API. It is built using Python, usi
 
 ### The Aquarius API
 
-Aquarius provides REST api to fetch the data from off-chain datastore. 
+Aquarius provides REST api to fetch the data from off-chain datastore.
 Please refer to [API.md](API.md) file for details on the API itself.
 
 ### The EventsMonitor
@@ -62,6 +63,7 @@ The events monitor runs continuously to retrieve and index the chain Metadata. I
 - a Decryptor class that handles decompression and decryption on the chain data, through communication with Provider
 - a set of `ALLOWED_PUBLISHERS`, if such a restriction exists. You can set a limited number of allowed publisher addresses using this env variable.
 - a Purgatory, based on the `ASSET_PURGATORY_URL` and `ACCOUNT_PURGATORY_URL` env variables. These mark some assets as being in purgatory (`"isInPurgatory": True`), enabling restrictions for some assets or accounts.
+- a VeAllocate, based on the `VEALLOCATE_URL` and `VEALLOCATE_UPDATE_INTERVAL` env variables. This updates the veAllocation for datasets.
 - start blocks, if such defined using `BFACTORY_BLOCK` and `METADATA_CONTRACT_BLOCK`. These start blocks are coroborated with the last stored blocks per Elasticsearch, to avoid indexing multiple times
 
 The EventsMonitor processes block chunks as defined using `BLOCKS_CHUNK_SIZE`. For each block, it retrieves all `MetadataCreated` and `MetadataUpdated` events, and these events are processed inside the `MetadataCreatedProcessor` and `MetadataUpdatedProcessor` classes. These processors run the following flow:
@@ -135,11 +137,18 @@ IGNORE_LAST_BLOCK
 BLOCKS_CHUNK_SIZE
 
 # URLs of asset purgatory and account purgatory. If neither exists, the purgatory will not be processed. The list should be formatted as a list of dictionaries containing the address and reason. See https://github.com/oceanprotocol/list-purgatory/blob/main/list-accounts.json for an example
+# IMPORTANT.  If you are running multiple aquarius event monitors (for multiple chains), make sure that only one event-monitor will handle purgatory
 ASSET_PURGATORY_URL
 ACCOUNT_PURGATORY_URL
 
 # Customise purgatory update (refresh) time (in number of minutes)
 PURGATORY_UPDATE_INTERVAL
+
+# URL for getting the veAllocation list. If not exists, the veAllocate will not be processed. Possible values are: https://df-sql.oceandao.org/nftinfo for mainnet and https://test-df-sql.oceandao.org/nftinfo for goerli, because veOCEAN is deployed only on this networks. All other networks SHOULD NOT HAVE this defined.  The list should be formatted as a list of dictionaries containing chainID,nft_addr and ve_allocated
+VEALLOCATE_URL
+
+# Customise veAllocate update (refresh) time (in number of minutes)
+VEALLOCATE_UPDATE_INTERVAL
 
 # The URL of the RBAC Permissions Server. If set, Aquarius will check permissions with RBAC. Leave empty/unset to skip RBAC permission checks.
 RBAC_SERVER_URL
@@ -149,6 +158,9 @@ EVENTS_CLEAN_START
 
 # Subgraph URLs in the form of a json-dumped string mapping chain_ids to subgraph urls.
 SUBGRAPH_URLS
+
+# Process a queue with failed assets, e.g. retry where temporary network flukes or similar conditions caused a failure
+PROCESS_RETRY_QUEUE
 ```
 ## Running Aquarius for multiple chains
 
@@ -170,12 +182,16 @@ If you're developing a marketplace, you'll want to run Aquarius and several othe
 
 ## Learn about Aquarius API
 
-[Here](https://docs.oceanprotocol.com/references/aquarius/) is API documentation. You can find more details about the ontology of the metadata in the [Ocean documentation](https://docs.oceanprotocol.com/concepts/ddo-metadata/).
+[Here](https://docs.oceanprotocol.com/api-references/aquarius-rest-api) is API documentation. You can find more details about the ontology of the metadata in the [Ocean documentation](https://docs.oceanprotocol.com/core-concepts/did-ddo#metadata).
 
 If you have Aquarius running locally, you can find a Swagger API documentation at [http://localhost:5000/api/docs](http://localhost:5000/api/docs) or maybe [http://0.0.0.0:5000/api/docs](http://0.0.0.0:5000/api/docs).
 
 - Tip 1: If that doesn't work, then try `https`.
 - Tip 2: If your browser shows the Swagger header across the top but says "Failed to load spec." then we found that, in Chrome, if we went to `chrome://flags/#allow-insecure-localhost` and toggled it to Enabled, then relaunched Chrome, it worked.
+
+## Running Aquarius locally
+
+For testing purposes, running Aquarius from [barge](https://github.com/oceanprotocol/barge/) should suffice, but if you want to run your own version of Aquarius (with any configurations or alterations), you can do that by following the instructions in [the developers documentation](developers.md).
 
 ## Development
 
