@@ -150,6 +150,9 @@ class RetryMechanism:
             self._purgatory,
             chain_id,
         ]
+        logger.info(
+            f"retry mechanism self._es_instance just start retry for tx: {tx_id}"
+        )
 
         try:
             processor = (
