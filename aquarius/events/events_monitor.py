@@ -4,7 +4,6 @@
 #
 import json
 import logging
-import math
 import os
 import time
 from distutils.util import strtobool
@@ -14,7 +13,7 @@ import elasticsearch
 from jsonsempai import magic  # noqa: F401
 
 from aquarius.app.es_instance import ElasticsearchInstance
-from aquarius.app.util import get_bool_env_value, get_allowed_publishers, reset_monitor_sleep_time
+from aquarius.app.util import get_bool_env_value, get_allowed_publishers
 from aquarius.block_utils import BlockProcessingClass
 from aquarius.config import get_version
 from aquarius.retry_mechanism import RetryMechanism
@@ -218,14 +217,10 @@ class EventsMonitor(BlockProcessingClass):
             f"Web3 block:{current_block}, from:block {from_block}, chunk: {self.blockchain_chunk_size}"
         )
         start_block_chunk = from_block
-        # for end_block_chunk in range(
-        #     from_block, current_block, self.sync_blockchain_chunk_size
-        # ):
-        end_block_chunk = start_block_chunk + 1
-        while start_block_chunk + self.sync_blockchain_chunk_size < current_block:
-            end_block_chunk = start_block_chunk + self.sync_blockchain_chunk_size
-            self.end_block_number = end_block_chunk
-            self.process_block_range(start_block_chunk + 1, end_block_chunk)
+        for end_block_chunk in range(
+            from_block, current_block, self.blockchain_chunk_size
+        ):
+            self.process_block_range(start_block_chunk, end_block_chunk)
             start_block_chunk = end_block_chunk
 
         self.process_block_range(end_block_chunk, current_block)
@@ -241,8 +236,6 @@ class EventsMonitor(BlockProcessingClass):
 
         if from_block > to_block:
             return
-
-        self.dynamic_block_setup(from_block)
         
         processor_args = [
             self._es_instance,
