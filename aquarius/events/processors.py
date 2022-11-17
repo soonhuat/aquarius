@@ -84,7 +84,7 @@ class EventProcessor(ABC):
             "address": self.dt_contract.address,
             "name": self._get_contract_attribute(self.dt_contract, "name"),
             "symbol": self._get_contract_attribute(self.dt_contract, "symbol"),
-            "state": self._get_contract_attribute(self.dt_contract, "metaDataState"),
+            "state": record["state"] if "state" in record else self._get_contract_attribute(self.dt_contract, "metaDataState"),
             "tokenURI": self._get_contract_attribute(self.dt_contract, "tokenURI", [1]),
             "owner": self.get_nft_owner(),
         }
