@@ -79,15 +79,21 @@ class EventProcessor(ABC):
             "contract": self.event.address,
             "datetime": block_time,
         }
-
+        hasNftState = "nft" in record and "state" in record["nft"]
+        logger.info(
+            f"MetadataUpdated add_aqua_data record before: {record}, is state in record {hasNftState}"
+        )
         record[AquariusCustomDDOFields.NFT] = {
             "address": self.dt_contract.address,
             "name": self._get_contract_attribute(self.dt_contract, "name"),
             "symbol": self._get_contract_attribute(self.dt_contract, "symbol"),
-            "state": record["state"] if "state" in record else self._get_contract_attribute(self.dt_contract, "metaDataState"),
+            "state": record["nft"]["state"] if hasNftState else self._get_contract_attribute(self.dt_contract, "metaDataState"),
             "tokenURI": self._get_contract_attribute(self.dt_contract, "tokenURI", [1]),
             "owner": self.get_nft_owner(),
         }
+        logger.info(
+            f"MetadataUpdated add_aqua_data record after: {record[AquariusCustomDDOFields.NFT]}"
+        )
 
         record[AquariusCustomDDOFields.DATATOKENS] = self.get_tokens_info(record)
 
