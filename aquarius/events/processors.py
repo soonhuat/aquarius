@@ -257,12 +257,9 @@ class MetadataCreatedProcessor(EventProcessor):
 
         try:
             ddo = self._es_instance.read(did)
-            if ddo["chainId"] == self._chain_id:
-                if ddo["nft"]["state"] == MetadataStates.ACTIVE:
-                    logger.warning(f"{did} is already registered on this chainId")
-                    return
-                self.restore_nft_state(ddo, asset["nft"]["state"])
-                return True
+            if ddo["chainId"] == self._chain_id and ddo["nft"]["state"] == MetadataStates.ACTIVE:
+                logger.warning(f"{did} is already registered on this chainId")
+                return
         except Exception:
             pass
 
@@ -278,9 +275,10 @@ class MetadataCreatedProcessor(EventProcessor):
                 self._es_instance.update(record_str, did)
                 _record = json.loads(record_str)
                 name = _record["metadata"]["name"]
+                state = _record["nft"]["state"]
                 logger.info(
                     f"DDO saved: did={did}, name={name}, "
-                    f"publisher={sender_address}, chainId={self._chain_id}"
+                    f"publisher={sender_address}, chainId={self._chain_id}, state={state}"
                 )
                 return True
             except (KeyError, Exception) as err:
