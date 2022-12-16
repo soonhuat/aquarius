@@ -205,7 +205,8 @@ class MetadataCreatedProcessor(EventProcessor):
         return _record
 
     def restore_nft_state(self, ddo, state):
-        ddo["nft"]["state"] = state
+        onChainNftState = self._get_contract_attribute(self.dt_contract, "metaDataState")
+        ddo["nft"]["state"] = onChainNftState
         record_str = json.dumps(ddo)
         self._es_instance.update(record_str, self.did)
         _record = json.loads(record_str)
@@ -213,7 +214,7 @@ class MetadataCreatedProcessor(EventProcessor):
         sender_address = _record["nft"]["owner"]
         logger.info(
             f"DDO saved: did={self.did}, name={name}, "
-            f"publisher={sender_address}, chainId={self._chain_id}, updated state={state}"
+            f"publisher={sender_address}, chainId={self._chain_id}, updated state={onChainNftState}"
         )
 
     def process(self):
