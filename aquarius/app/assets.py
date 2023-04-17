@@ -1,9 +1,11 @@
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
+import copy
 import elasticsearch
 from flask import Blueprint, jsonify, request
+from datetime import timedelta
 import json
 import logging
 import os
@@ -15,7 +17,6 @@ from aquarius.app.util import (
     get_signature_vrs,
 )
 from aquarius.ddo_checker.shacl_checker import validate_dict
-from aquarius.events.util import setup_web3
 from aquarius.log import setup_logging
 from aquarius.myapp import app
 from aquarius.events.purgatory import Purgatory
@@ -27,7 +28,7 @@ setup_logging()
 assets = Blueprint("assets", __name__)
 
 logger = logging.getLogger("aquarius")
-es_instance = ElasticsearchInstance(app.config["AQUARIUS_CONFIG_FILE"])
+es_instance = ElasticsearchInstance()
 
 
 @assets.route("/ddo/<did>", methods=["GET"])
@@ -292,14 +293,15 @@ def query_ddo():
         )
 
     try:
-        return jsonify(sanitize_query_result(es_instance.es.search(data)))
+        args = copy.deepcopy(data)
+        if "from" in args.keys():
+            args["from_"] = args.pop("from")
+        result = es_instance.es.search(**args)
+        return jsonify(sanitize_query_result(result.body))
     except elasticsearch.exceptions.TransportError as e:
-        error = e.error if isinstance(e.error, str) else str(e.error)
-        info = e.info if isinstance(e.info, dict) else ""
-        logger.info(
-            f"Received elasticsearch TransportError: {error}, more info: {info}."
-        )
-        return (jsonify(error=error, info=info), e.status_code)
+        error = e.message
+        logger.info(f"Received elasticsearch TransportError: {error}.")
+        return (jsonify(error=error), 400)
     except Exception as e:
         logger.error(f"Received elasticsearch Error: {str(e)}.")
         return jsonify(error=f"Encountered Elasticsearch Exception: {str(e)}"), 500
@@ -386,12 +388,26 @@ def trigger_caching():
     consumes:
       - application/json
     parameters:
-      - name: transactionId
+      - in: body
+        name: body
         required: true
-        description: transaction id containing MetadataCreated or MetadataUpdated event
-      - name: logIndex
-        required: false
-        description: zero-based index in log if transaction contains more events
+        description: JSON object containing transaction details
+        schema:
+          type: object
+          properties:
+            transactionId:
+              type: string
+              description: transaction id containing MetadataCreated or MetadataUpdated event
+              example: "0xaabbccdd"
+            chainId:
+              type: int
+              description: chain Id id of MetadataCreated or MetadataUpdated event
+              example: 8996
+            logIndex:
+              type: int
+              required: false
+              description: log index for the event in the transaction
+              example: 1
     responses:
       200:
         description: successful operation.
@@ -403,12 +419,15 @@ def trigger_caching():
     try:
         data = request.args if request.args else request.json
         tx_id = data.get("transactionId")
+        chain_id = data.get("chain_id")
+        if not tx_id or not chain_id:
+            return (
+                jsonify(error="Invalid transactionId or chain_id"),
+                400,
+            )
         log_index = int(data.get("logIndex", 0))
 
-        config_file = app.config["AQUARIUS_CONFIG_FILE"]
-        web3 = setup_web3(config_file)
-
-        es_instance = ElasticsearchInstance(config_file)
+        es_instance = ElasticsearchInstance()
         retries_db_index = f"{es_instance.db_index}_retries"
         purgatory = (
             Purgatory(es_instance)
@@ -417,18 +436,12 @@ def trigger_caching():
         )
 
         retry_mechanism = RetryMechanism(
-            config_file, es_instance, retries_db_index, purgatory
+            es_instance, retries_db_index, purgatory, chain_id, None
         )
-
-        success, result = retry_mechanism.handle_retry(
-            tx_id, log_index, web3.eth.chain_id
-        )
-
-        if not success:
-            return jsonify(error=result), 400
-
+        retry_mechanism.retry_interval = timedelta(seconds=1)
+        retry_mechanism.add_tx_to_retry_queue(tx_id, log_index)
         response = app.response_class(
-            response=result,
+            response="Queued",
             status=200,
             mimetype="application/json",
         )

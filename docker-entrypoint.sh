@@ -1,11 +1,8 @@
 #!/bin/sh
 ##
-## Copyright 2021 Ocean Protocol Foundation
+## Copyright 2023 Ocean Protocol Foundation
 ## SPDX-License-Identifier: Apache-2.0
 ##
-
-export AQUARIUS_CONFIG_FILE=/aquarius/config.ini
-envsubst < /aquarius/config.ini.template > /aquarius/config.ini
 
 if [ "${DEPLOY_CONTRACTS}" = "true" ]; then
   while [ ! -f "/ocean-contracts/artifacts/ready" ]; do

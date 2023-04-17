@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
 import json
@@ -61,6 +61,6 @@ def events_object():
         provider = get_web3_connection_provider(network_rpc)
         web3 = Web3(provider)
 
-        EVENTS_INSTANCE = EventsMonitor(web3, app.config["AQUARIUS_CONFIG_FILE"])
+        EVENTS_INSTANCE = EventsMonitor(web3)
         EVENTS_INSTANCE.store_last_processed_block(0)
     return EVENTS_INSTANCE
