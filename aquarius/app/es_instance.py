@@ -27,22 +27,28 @@ class ElasticsearchInstance(object):
         port = int(os.getenv("DB_PORT", 9200))
         username = os.getenv("DB_USERNAME", "elastic")
         password = os.getenv("DB_PASSWORD", "changeme")
-        args["http_auth"] = (username, password)
-        args["maxsize"] = 1000
-        ssl = self.str_to_bool(os.getenv("DB_SSL", "false"))
-        if ssl:
-            args["verify_certs"] = self.str_to_bool(
-                os.getenv("DB_VERIFY_CERTS", "false")
-            )
-            args["ca_certs"] = os.getenv("DB_CA_CERTS", None)
-            args["client_key"] = os.getenv("DB_CLIENT_KEY", None)
-            args["client_cert"] = os.getenv("DB_CLIENT_CERT", None)
-            args["ssl_show_warn"] = False
         index = os.getenv("DB_INDEX", "oceandb")
+        ssl = self.str_to_bool(os.getenv("DB_SSL", "false"))
+        verify_certs = self.str_to_bool(
+            os.getenv("DB_VERIFY_CERTS", "false")
+        )
+        ca_certs = os.getenv("DB_CA_CERTS", None)
+        client_key = os.getenv("DB_CLIENT_KEY", None)
+        client_cert = os.getenv("DB_CLIENT_CERT", None)
         self._index = index
         self._did_states_index = f"{self._index}_did_states"
         try:
-            self._es = Elasticsearch(host + ":" + str(port), **args)
+            self._es = Elasticsearch(
+                [host],
+                http_auth=(username, password),
+                port=port,
+                use_ssl=ssl,
+                verify_certs=verify_certs,
+                ca_certs=ca_certs,
+                client_cert=client_key,
+                client_key=client_cert,
+                maxsize=1000,
+            )
             while self._es.ping() is False:
                 logging.info("Trying to connect...")
                 time.sleep(5)
