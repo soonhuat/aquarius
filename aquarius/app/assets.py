@@ -297,7 +297,7 @@ def query_ddo():
         if "from" in args.keys():
             args["from_"] = args.pop("from")
         result = es_instance.es.search(**args)
-        return jsonify(sanitize_query_result(result.body))
+        return jsonify(sanitize_query_result(result))
     except elasticsearch.exceptions.TransportError as e:
         error = e.message
         logger.info(f"Received elasticsearch TransportError: {error}.")

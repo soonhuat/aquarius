@@ -35,7 +35,7 @@ def route_get_retry_queue():
             data.get("did"),
             data.get("type"),
         )
-        return jsonify(result.body)
+        return jsonify(result)
     except Exception as e:
         return (
             jsonify(error=f"Encountered error : {str(e)}."),
@@ -83,7 +83,7 @@ def route_get_did_state():
             data.get("txId"),
             data.get("did"),
         )
-        return jsonify(result.body["hits"]["hits"][0]["_source"])
+        return jsonify(result["hits"]["hits"][0]["_source"])
     except Exception as e:
         return (
             jsonify(error=f"Encountered error : {str(e)}."),
