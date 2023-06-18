@@ -56,6 +56,10 @@ class EventProcessor(ABC):
         self.metadata_proofs = None
 
     def check_permission(self, publisher_address):
+        rbac_url = os.getenv("RBAC_SERVER_URL")
+        logger.debug(
+            f"Process new DDO, check_permission publisher_address:{publisher_address}, RBAC: {rbac_url}"
+        )
         if not os.getenv("RBAC_SERVER_URL") or not publisher_address:
             return True
 
@@ -257,15 +261,21 @@ class MetadataCreatedProcessor(EventProcessor):
 
         try:
             ddo = self._es_instance.read(did)
-            if ddo["chainId"] == self._chain_id and ddo["nft"]["state"] == MetadataStates.ACTIVE:
-                logger.warning(f"{did} is already registered on this chainId")
-                return
+            if ddo["chainId"] == self._chain_id:
+                if ddo["nft"]["state"] == MetadataStates.ACTIVE:
+                    logger.warning(f"{did} is already registered on this chainId")
+                    return
+                self.restore_nft_state(ddo, asset["nft"]["state"])
+                return True, ""
         except Exception:
             pass
 
         permission = self.check_permission(sender_address)
         if not permission:
-            raise Exception("RBAC permission denied.")
+            logger.error(
+                f"[ACENTRIK_REVISIT] RBAC permission denied while processing new DDO no permission, sender_address:{sender_address}, txid: {self.txid}, block {self.block}, permission: {permission}, assset: {asset}"
+            )
+            return False, "skip"
 
         _record = self.make_record(asset)
 
@@ -282,10 +292,10 @@ class MetadataCreatedProcessor(EventProcessor):
                 )
                 return True
             except (KeyError, Exception) as err:
-                logger.error(
+                raise Exception(
                     f"encountered an error while saving the asset data to ES: {str(err)}"
                 )
-        return False
+        return False, ""
 
 
 class MetadataUpdatedProcessor(EventProcessor):
@@ -363,7 +373,10 @@ class MetadataUpdatedProcessor(EventProcessor):
 
         permission = self.check_permission(sender_address)
         if not permission:
-            raise Exception("RBAC permission denied.")
+            logger.error(
+                f"[ACENTRIK_REVISIT] RBAC permission denied while processing new DDO no permission, sender_address:{sender_address}, txid: {self.txid}, block {self.block}, permission: {permission}, assset: {asset}"
+            )
+            return False, "skip"
 
         try:
             old_asset = self._es_instance.read(did)
@@ -386,7 +399,7 @@ class MetadataUpdatedProcessor(EventProcessor):
 
         is_updateable = self.check_update(asset, old_asset, sender_address)
         if not is_updateable:
-            return False
+            return False, ""
 
         _record = self.make_record(asset, old_asset)
         if _record:
@@ -396,11 +409,11 @@ class MetadataUpdatedProcessor(EventProcessor):
                 logger.info(f"updated DDO did={did}, updated: {updated}")
                 return True
             except (KeyError, Exception) as err:
-                logger.error(
+                raise Exception(
                     f"encountered an error while updating the asset data to ES: {str(err)}"
                 )
 
-        return False
+        return False, ""
 
     def check_update(self, new_asset, old_asset, sender_address):
         # do not update if we have the same txid

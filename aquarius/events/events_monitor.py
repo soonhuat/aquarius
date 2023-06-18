@@ -224,6 +224,9 @@ class EventsMonitor(BlockProcessingClass):
             start_block_chunk = end_block_chunk
 
         self.process_block_range(end_block_chunk, current_block)
+        logger.info(
+            f"process_current_blocks done processing current block up to {end_block_chunk}"
+        )
 
     def process_block_range(self, from_block, to_block):
         """Process a range of blocks."""
@@ -233,7 +236,7 @@ class EventsMonitor(BlockProcessingClass):
 
         if from_block > to_block:
             return
-
+        
         processor_args = [
             self._es_instance,
             self._web3,
