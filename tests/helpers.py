@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
 import hashlib
@@ -10,15 +10,14 @@ import uuid
 
 import requests
 from eth_account import Account
-from jsonsempai import magic  # noqa: F401
 from web3 import Web3
 from web3.datastructures import AttributeDict
+from eth_utils.address import to_checksum_address
 
 from aquarius.app.util import get_signature_vrs
 from aquarius.events.constants import EventTypes
 from aquarius.events.http_provider import get_web3_connection_provider
-from aquarius.events.util import deploy_datatoken, make_did
-from artifacts import ERC721Template
+from aquarius.events.util import deploy_datatoken, make_did, get_nft_contract
 from tests.ddos.ddo_event_sample_v4 import ddo_event_sample_v4
 from web3.logs import DISCARD
 
@@ -86,18 +85,16 @@ def send_create_update_tx(name, ddo, flags, account):
         else EventTypes.EVENT_METADATA_UPDATED
     )
 
-    dt_contract = get_web3().eth.contract(
-        abi=ERC721Template.abi, address=web3.toChecksumAddress(datatoken_address)
-    )
+    dt_contract = get_nft_contract(get_web3(), datatoken_address)
 
-    cap = web3.toWei(100000, "ether")
+    cap = web3.to_wei(100000, "ether")
     erc20_txn = dt_contract.functions.createERC20(
         1,
         ["ERC20DT1", "ERC20DT1Symbol"],
         [
-            web3.toChecksumAddress(account.address),
-            web3.toChecksumAddress(account.address),
-            web3.toChecksumAddress(account.address),
+            to_checksum_address(account.address),
+            to_checksum_address(account.address),
+            to_checksum_address(account.address),
             "0x0000000000000000000000000000000000000000",
         ],
         [cap, 0],
@@ -118,9 +115,10 @@ def send_create_update_tx(name, ddo, flags, account):
     if flags[0] & 2:
         headers = {"Content-type": "application/octet-stream"}
         response = requests.post(
-            provider_url + "/api/services/encrypt",
+            provider_url + "/api/services/encrypt?chainId={web3.chain_id}",
             data=compressed_document,
             headers=headers,
+            timeout=5,
         )
         encrypted_data = response.text
     else:
@@ -136,10 +134,11 @@ def send_create_update_tx(name, ddo, flags, account):
         validatorContent["s"][0],
     )
 
+    web3.strict_bytes_type_checking = False
     txn_hash = dt_contract.functions.setMetaData(
         0,
         provider_url,
-        web3.toChecksumAddress(provider_address),
+        to_checksum_address(provider_address),
         flags,
         encrypted_data,
         dataHash,
@@ -147,7 +146,7 @@ def send_create_update_tx(name, ddo, flags, account):
     ).transact()
     txn_receipt = get_web3().eth.wait_for_transaction_receipt(txn_hash)
 
-    _ = getattr(dt_contract.events, event_name)().processReceipt(
+    _ = getattr(dt_contract.events, event_name)().process_receipt(
         txn_receipt, errors=DISCARD
     )
 
@@ -158,11 +157,9 @@ def send_set_metadata_state_tx(ddo, account, state):
     datatoken_address = ddo["nftAddress"]
 
     web3 = get_web3()
-    web3.eth.default_account = web3.toChecksumAddress(account.address)
+    web3.eth.default_account = to_checksum_address(account.address)
 
-    dt_contract = web3.eth.contract(
-        abi=ERC721Template.abi, address=web3.toChecksumAddress(datatoken_address)
-    )
+    dt_contract = get_nft_contract(web3, datatoken_address)
 
     txn_hash = dt_contract.functions.setMetaDataState(state).transact()
     txn_receipt = web3.eth.wait_for_transaction_receipt(txn_hash)

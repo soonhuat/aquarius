@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
 import logging
@@ -36,9 +36,6 @@ def schema(version):
       500:
         description: server error
     """
-    import pdb
-
-    pdb.set_trace()
     try:
         if version not in ALLOWED_VERSIONS:
             return jsonify(erorr="Schema version not found."), 404

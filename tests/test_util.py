@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
 from eth_account import Account
@@ -216,9 +216,8 @@ def test_get_network_name(monkeypatch):
 
 
 def test_setup_web3(monkeypatch):
-    config_file = app.config["AQUARIUS_CONFIG_FILE"]
     monkeypatch.setenv("NETWORK_NAME", "rinkeby")
-    assert setup_web3(config_file, logger)
+    assert setup_web3(logger)
 
 
 def test_setup_logging(monkeypatch):
@@ -247,10 +246,9 @@ def test_wallet_missing(monkeypatch):
 
 
 def test_deploy_datatoken_fails():
-    config_file = app.config["AQUARIUS_CONFIG_FILE"]
-    web3 = setup_web3(config_file)
+    web3 = setup_web3()
     test_account1 = Account.from_key(os.environ.get("EVENTS_TESTS_PRIVATE_KEY", None))
-    with patch.object(type(web3.eth), "getTransactionReceipt") as mock:
+    with patch.object(type(web3.eth), "get_transaction_receipt") as mock:
         mock.side_effect = Exception()
         with pytest.raises(Exception, match="tx not found"):
             deploy_datatoken(web3, test_account1, "TT1", "TT1Symbol")

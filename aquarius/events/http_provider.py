@@ -1,5 +1,5 @@
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
 import os
@@ -45,6 +45,7 @@ class CustomHTTPProvider(HTTPProvider):
 
 
 def get_web3_connection_provider(network_url):
+
     if network_url.startswith("http"):
         provider = CustomHTTPProvider(network_url)
     elif network_url.startswith("ws"):

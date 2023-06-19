@@ -1,8 +1,10 @@
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
 from eth_utils import remove_0x_prefix
+from eth_utils.address import to_checksum_address, is_address
+import artifacts
 import hashlib
 import json
 import logging
@@ -10,13 +12,11 @@ import os
 import time
 from pathlib import Path
 
-from jsonsempai import magic  # noqa: F401
 from web3 import Web3
+from web3.exceptions import ExtraDataLengthError
 
-from addresses import address as contract_addresses
-from aquarius.app.util import get_bool_env_value
+import addresses
 from aquarius.events.http_provider import get_web3_connection_provider
-from artifacts import ERC721Factory, FixedRateExchange, Dispenser, FactoryRouter
 from web3.logs import DISCARD
 
 
@@ -102,19 +102,19 @@ def deploy_datatoken(w3, account, name, symbol):
         "0x0000000000000000000000000000000000000000",
         "http://oceanprotocol.com/nft",
         True,
-        w3.toChecksumAddress(account.address),
-    ).buildTransaction({"from": account.address, "gasPrice": w3.eth.gas_price})
+        to_checksum_address(account.address),
+    ).build_transaction({"from": account.address, "gasPrice": w3.eth.gas_price})
 
     raw_tx = sign_tx(w3, built_tx, account.key)
     tx_hash = w3.eth.send_raw_transaction(raw_tx)
 
     time.sleep(3)
     try:
-        receipt = w3.eth.getTransactionReceipt(tx_hash)
+        receipt = w3.eth.get_transaction_receipt(tx_hash)
 
         return (
             dt_factory.events.NFTCreated()
-            .processReceipt(receipt, errors=DISCARD)[0]
+            .process_receipt(receipt, errors=DISCARD)[0]
             .args.newTokenAddress
         )
     except Exception:
@@ -141,37 +141,62 @@ def get_address_of_type(web3, chain_id=None, address_type=None):
     return correspondence[chain_id]
 
 
+def get_contract(web3, contract_name, address):
+    abi = get_contract_definition(contract_name)["abi"]
+
+    return web3.eth.contract(address=to_checksum_address(address), abi=abi)
+
+
+def get_contract_definition(contract_name: str):
+    """Returns the abi JSON for a contract name."""
+    path = os.path.join(artifacts.__file__, "..", f"{contract_name}.json")
+    path = Path(path).expanduser().resolve()
+
+    if not path.exists():
+        raise TypeError("Contract name does not exist in artifacts.")
+
+    with open(path) as f:
+        return json.load(f)
+
+
 def get_dt_factory(web3, chain_id=None):
     chain_id = chain_id if chain_id else web3.eth.chain_id
     address = get_address_of_type(web3, chain_id, "ERC721Factory")
-    abi = ERC721Factory.abi
 
-    return web3.eth.contract(address=web3.toChecksumAddress(address), abi=abi)
+    return get_contract(web3, "ERC721Factory", address)
 
 
 def get_fre(web3, chain_id=None, address=None):
     chain_id = chain_id if chain_id else web3.eth.chain_id
     if not address:
         address = get_address_of_type(web3, chain_id, "FixedPrice")
-    abi = FixedRateExchange.abi
 
-    return web3.eth.contract(address=web3.toChecksumAddress(address), abi=abi)
+    return get_contract(web3, "FixedRateExchange", address)
 
 
 def get_dispenser(web3, chain_id=None, address=None):
     chain_id = chain_id if chain_id else web3.eth.chain_id
     if not address:
         address = get_address_of_type(web3, chain_id, "Dispenser")
-    abi = Dispenser.abi
 
-    return web3.eth.contract(address=web3.toChecksumAddress(address), abi=abi)
+    return get_contract(web3, "Dispenser", address)
 
 
 def get_factory_contract(web3, chain_id=None):
     chain_id = chain_id if chain_id else web3.eth.chain_id
     address = get_address_of_type(web3, chain_id, "Router")
-    abi = FactoryRouter.abi
-    return web3.eth.contract(address=web3.toChecksumAddress(address), abi=abi)
+
+    return get_contract(web3, "FactoryRouter", address)
+
+
+def get_nft_contract(web3, address):
+    address = to_checksum_address(address)
+    return get_contract(web3, "ERC721Template", address)
+
+
+def get_erc20_contract(web3, address):
+    address = to_checksum_address(address)
+    return get_contract(web3, "ERC20Template", address)
 
 
 def is_approved_fre(web3, address, chain_id=None):
@@ -204,7 +229,9 @@ def get_address_file():
     return (
         Path(env_file).expanduser().resolve()
         if env_file
-        else Path(contract_addresses.__file__).expanduser().resolve()
+        else Path(os.path.join(addresses.__file__, "..", "address.json"))
+        .expanduser()
+        .resolve()
     )
 
 
@@ -225,9 +252,8 @@ def get_metadata_start_block():
     return block_number
 
 
-def setup_web3(config_file, _logger=None):
+def setup_web3(_logger=None):
     """
-    :param config_file: Web3 object instance
     :param _logger: Logger instance
     :return: web3 instance
     """
@@ -240,11 +266,9 @@ def setup_web3(config_file, _logger=None):
     provider = get_web3_connection_provider(network_rpc)
     web3 = Web3(provider)
 
-    if (
-        get_bool_env_value("USE_POA_MIDDLEWARE", 0)
-        or get_network_name().lower() == "rinkeby"
-        or get_network_name().lower() == "mumbai"
-    ):
+    try:
+        web3.eth.get_block("latest")
+    except ExtraDataLengthError:
         from web3.middleware import geth_poa_middleware
 
         web3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -253,8 +277,18 @@ def setup_web3(config_file, _logger=None):
 
 
 def make_did(data_nft_address, chain_id):
+    if not is_address(data_nft_address.lower()):
+        return None
     return "did:op:" + remove_0x_prefix(
-        Web3.toHex(
-            hashlib.sha256((data_nft_address + str(chain_id)).encode("utf-8")).digest()
+        Web3.to_hex(
+            hashlib.sha256(
+                (to_checksum_address(data_nft_address) + str(chain_id)).encode("utf-8")
+            ).digest()
         )
     )
+
+
+def update_did_state(es_instance, nft_address, chain_id, txid, valid, error):
+    if not es_instance:
+        return
+    es_instance.update_did_state(nft_address, chain_id, txid, valid, error)

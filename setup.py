@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Ocean Protocol Foundation
+# Copyright 2023 Ocean Protocol Foundation
 # SPDX-License-Identifier: Apache-2.0
 #
 
@@ -19,7 +19,7 @@ with open("CHANGELOG.md") as history_file:
 
 install_requirements = [
     "coloredlogs==15.0.1",
-    "Flask==2.2.2",
+    "Flask==2.2.3",
     "Flask-Cors==3.0.10",
     "flask-swagger==0.2.14",
     "flask-swagger-ui==4.11.1",
@@ -28,38 +28,37 @@ install_requirements = [
     "gunicorn==20.1.0",
     "elasticsearch==7.17.0",
     "PyYAML==6.0",
-    "pytz==2022.5",
-    "ocean-contracts==1.1.8",
-    "web3==5.31.1",
+    "pytz==2023.3",
+    "ocean-contracts==1.1.12",
+    "web3==6.1.0",
     "gevent",
-    "json-sempai==0.4.0",
     "python-dateutil==2.8.2",
-    "pyshacl==0.20.0",
+    "pyshacl==0.21.0",
     "gql==3.4.0",
-    "aiohttp==3.8.3",
+    "aiohttp==3.8.4",
 ]
 
 setup_requirements = ["pytest-runner==6.0.0"]
 
 dev_requirements = [
     "bumpversion==0.6.0",
-    "pkginfo==1.8.3",
-    "twine==4.0.1",
+    "pkginfo==1.9.6",
+    "twine==4.0.2",
     "flake8",
     "isort",
     "black",
     "pre-commit",
     # not virtualenv: devs should already have it before pip-installing
-    "watchdog==2.1.9",
+    "watchdog==3.0.0",
     "licenseheaders",
 ]
 
 test_requirements = [
-    "Flask==2.2.2",
+    "Flask==2.2.3",
     "codacy-coverage==1.3.11",
-    "coverage==6.5.0",
+    "coverage==7.2.3",
     "mccabe==0.6.1",
-    "pylint==2.15.5",
+    "pylint==2.17.2",
     "pytest",
     "pytest-env",
     "freezegun==1.2.2",
@@ -95,7 +94,7 @@ setup(
     url="https://github.com/oceanprotocol/aquarius",
     # fmt: off
     # bumpversion needs single quotes
-    version='4.5.5',
+    version='5.1.2',
     # fmt: on
     zip_safe=False,
 )
