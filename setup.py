@@ -19,7 +19,7 @@ with open("CHANGELOG.md") as history_file:
 
 install_requirements = [
     "coloredlogs==15.0.1",
-    "Flask==2.2.3",
+    "Flask==2.3.1",
     "Flask-Cors==3.0.10",
     "flask-swagger==0.2.14",
     "flask-swagger-ui==4.11.1",
@@ -30,11 +30,11 @@ install_requirements = [
     "PyYAML==6.0",
     "pytz==2023.3",
     "ocean-contracts==1.1.12",
-    "web3==6.1.0",
+    "web3==6.3.0",
     "gevent",
     "python-dateutil==2.8.2",
-    "pyshacl==0.21.0",
-    "gql==3.4.0",
+    "pyshacl==0.22.2",
+    "gql==3.4.1",
     "aiohttp==3.8.4",
 ]
 
@@ -54,11 +54,11 @@ dev_requirements = [
 ]
 
 test_requirements = [
-    "Flask==2.2.3",
+    "Flask==2.3.1",
     "codacy-coverage==1.3.11",
-    "coverage==7.2.3",
+    "coverage==7.2.5",
     "mccabe==0.6.1",
-    "pylint==2.17.2",
+    "pylint==2.17.4",
     "pytest",
     "pytest-env",
     "freezegun==1.2.2",
