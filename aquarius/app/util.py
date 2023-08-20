@@ -131,18 +131,37 @@ def get_allowed_publishers():
 
 
 def set_default_additional_information_value(record, object, key):
-    field = None
     if object == "metadata" and key in record["metadata"]["additionalInformation"]:
-        field = record["metadata"]["additionalInformation"][key]
-    elif object == "services" and key in record["services"][0]["additionalInformation"]:
-        field = record["services"][0]["additionalInformation"][key]
-    
-    if field is None:
-        return
-    
-    fieldType = type(field)
-    if key in field and fieldType is not dict and fieldType is not list:
-        field = []
+        metadata_field = record["metadata"]["additionalInformation"][key]
+        metadata_field_type = type(metadata_field)
+        logger.info(
+            f"set_default_additional_information_value for key: {key}, metadata_field_type: {metadata_field_type}, metadata_field_type is not dict: {metadata_field_type is not dict}, metadata_field_type is not list: {metadata_field_type is not list}\n"
+        )
+        if metadata_field_type is not dict and metadata_field_type is not list:
+            record["metadata"]["additionalInformation"][key] = []
+            logger.info(
+                f"set_default_additional_information_value reset field: {metadata_field}, to fieldType: {type(metadata_field)}\n"
+            )
+            logger.info(
+                f"set_default_additional_information_value check field from record, to fieldType: {type(record['metadata']['additionalInformation'][key])}\n"
+            )
+    if object == "services" and key in record["services"][0]["additionalInformation"]:
+        service_field = record["services"][0]["additionalInformation"][key]
+        service_field_type = type(service_field)
+        logger.info(
+            f"set_default_additional_information_value for key: {key}, service_field_type: {service_field_type}, service_field_type is not dict: {service_field_type is not dict}, service_field_type is not list: {service_field_type is not list}\n"
+        )
+        if service_field_type is not dict and service_field_type is not list:
+            record["services"][0]["additionalInformation"] = []
+            logger.info(
+                f"set_default_additional_information_value reset field: {service_field}, to fieldType: {type(service_field)}\n"
+            )
+            logger.info(
+                f"set_default_additional_information_value check field from record, to fieldType: {type(record['services'][0]['additionalInformation'][key])}\n"
+            )
+    logger.info(
+        f"set_default_additional_information_value post transform record: {record}\n"
+    )
         
 def reset_monitor_sleep_time(self):
     default_sleep_time = 1
