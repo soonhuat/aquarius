@@ -6,6 +6,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from hashlib import sha256
+import os
 
 import requests
 
@@ -13,6 +14,8 @@ from aquarius.app.util import get_aquarius_wallet, get_signature_bytes
 from aquarius.events.util import update_did_state
 
 logger = logging.getLogger(__name__)
+# default will notspend more that 4 seconds.. if it fails, we will retry it
+event_request_timeout = int(os.environ.get("EVENTS_REQUEST_TIMEOUT", 4))
 
 
 def decrypt_ddo(w3, provider_url, contract_address, chain_id, txid, hash, es_instance):
@@ -32,9 +35,8 @@ def decrypt_ddo(w3, provider_url, contract_address, chain_id, txid, hash, es_ins
     }
 
     try:
-        # do not spend more that 4 seconds.. if it fails, we will retry it
         response = requests.post(
-            provider_url + "/api/services/decrypt", timeout=4, json=payload
+            provider_url + "/api/services/decrypt", timeout=event_request_timeout, json=payload
         )
     except Exception as e:
         response = None
