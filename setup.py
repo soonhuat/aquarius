@@ -20,22 +20,22 @@ with open("CHANGELOG.md") as history_file:
 install_requirements = [
     "coloredlogs==15.0.1",
     "Flask==2.3.1",
-    "Flask-Cors==3.0.10",
+    "Flask-Cors==4.0.0",
     "flask-swagger==0.2.14",
     "flask-swagger-ui==4.11.1",
     "Jinja2>=2.10.1",
     "requests>=2.21.0",
-    "gunicorn==20.1.0",
+    "gunicorn==21.2.0",
     "elasticsearch==7.17.0",
-    "PyYAML==6.0",
+    "PyYAML==6.0.1",
     "pytz==2023.3",
-    "ocean-contracts==1.1.12",
-    "web3==6.3.0",
+    "ocean-contracts==1.1.14",
+    "web3==6.7.0",
     "gevent",
     "python-dateutil==2.8.2",
     "pyshacl==0.22.2",
     "gql==3.4.1",
-    "aiohttp==3.8.4",
+    "aiohttp==3.8.5",
 ]
 
 setup_requirements = ["pytest-runner==6.0.0"]
@@ -56,9 +56,9 @@ dev_requirements = [
 test_requirements = [
     "Flask==2.3.1",
     "codacy-coverage==1.3.11",
-    "coverage==7.2.5",
+    "coverage==7.3.0",
     "mccabe==0.6.1",
-    "pylint==2.17.4",
+    "pylint==2.17.5",
     "pytest",
     "pytest-env",
     "freezegun==1.2.2",
@@ -94,7 +94,7 @@ setup(
     url="https://github.com/oceanprotocol/aquarius",
     # fmt: off
     # bumpversion needs single quotes
-    version='5.1.2',
+    version='5.1.4',
     # fmt: on
     zip_safe=False,
 )
