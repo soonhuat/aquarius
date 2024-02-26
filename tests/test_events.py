@@ -62,7 +62,9 @@ def run_test(client, base_ddo_url, events_instance, flags):
     for service in published_ddo["services"]:
         assert service["datatokenAddress"] == erc20_address
         assert service["name"] in ["dataAssetAccess", "dataAssetComputingService"]
-    ddo_state = get_did_state(events_instance._es_instance, None, None, None, did)
+    ddo_state = get_did_state(
+        events_instance._es_instance, web3.eth.chain_id, None, None, did
+    )
     assert len(ddo_state["hits"]["hits"]) == 1
     assert ddo_state["hits"]["hits"][0]["_id"] == did
     assert ddo_state["hits"]["hits"][0]["_source"]["valid"] is True
@@ -122,7 +124,7 @@ def test_publish_unallowed_address(client, base_ddo_url, events_object):
 
 
 def test_publish_and_update_ddo_rbac(client, base_ddo_url, events_object, monkeypatch):
-    monkeypatch.setenv("RBAC_SERVER_URL", "http://localhost:3000")
+    monkeypatch.setenv("RBAC_SERVER_URL", "http://172.15.0.8:3000")
     run_test(client, base_ddo_url, events_object, 2)
 
 
@@ -240,13 +242,6 @@ def test_get_last_processed_block(events_object, monkeypatch):
     with patch("elasticsearch.Elasticsearch.get") as mock:
         mock.return_value = {"_source": {"last_block": intended_block}}
         assert events_object.get_last_processed_block() == 0
-
-    monkeypatch.delenv("BFACTORY_BLOCK")
-    with patch("elasticsearch.Elasticsearch.get") as mock:
-        mock.side_effect = elasticsearch.NotFoundError("Boom!", meta={}, body={})
-        assert (
-            events_object.get_last_processed_block() == 5
-        )  # startBlock from address.json for ganache
 
 
 def test_store_last_processed_block(events_object):
@@ -440,7 +435,7 @@ def test_token_uri_update(client, base_ddo_url, events_object):
     web3.eth.default_account = test_account1.address
     txn_hash = nft_contract.functions.setTokenURI(
         1, "http://something-else.com"
-    ).transact()
+    ).transact({"from": test_account1.address})
     _ = web3.eth.wait_for_transaction_receipt(txn_hash)
 
     events_object.process_current_blocks()

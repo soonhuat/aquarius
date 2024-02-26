@@ -60,12 +60,12 @@ class EventProcessor(ABC):
         self._chain_id = chain_id
         self.metadata_proofs = None
 
-    def check_permission(self, publisher_address):
+    def check_permission(self, publisher_address, tx_id, asset):
         rbac_url = os.getenv("RBAC_SERVER_URL")
         logger.debug(
             f"Process new DDO, check_permission publisher_address:{publisher_address}, RBAC: {rbac_url}"
         )
-        if not os.getenv("RBAC_SERVER_URL") or not publisher_address:
+        if not os.getenv("RBAC_SERVER_URL") or not publisher_address or not tx_id:
             return True
 
         event_type = (
@@ -74,7 +74,7 @@ class EventProcessor(ABC):
             else "update"
         )
 
-        return RBAC.check_permission_rbac(event_type, publisher_address)
+        return RBAC.check_permission_rbac(event_type, publisher_address, tx_id, asset)
 
     def add_aqua_data(self, record):
         """Adds keys that are specific to Aquarius, on top of the DDO structure:
@@ -310,7 +310,7 @@ class MetadataCreatedProcessor(EventProcessor):
         except Exception:
             pass
 
-        permission = self.check_permission(sender_address)
+        permission = self.check_permission(sender_address, txid, asset)
         if not permission:
             error = f"RBAC permission denied while processing new DDO no permission, sender_address:{sender_address}, txid: {self.txid}, block {self.block}, permission: {permission}, assset: {asset}"
             logger.info(error)
@@ -461,7 +461,7 @@ class MetadataUpdatedProcessor(EventProcessor):
         self.did = asset["id"]
         did, sender_address = self.did, self.sender_address
 
-        permission = self.check_permission(sender_address)
+        permission = self.check_permission(sender_address, txid, asset)
         if not permission:
             error = "RBAC permission denied while processing new DDO no permission, sender_address:{sender_address}, txid: {self.txid}, block {self.block}, permission: {permission}, assset: {asset}"
             logger.info(error)
